@@ -11,3 +11,6 @@ examples*
 build
 *.egg-info/
 *.zip
+
+*.wav
+*.mp3

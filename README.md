@@ -1,3 +1,10 @@
+conda activate voice_clone
+pip install TTS
+fix error in /home/giswarm/miniconda3/envs/voice_clone/lib/python3.9/site-packages/bangla/__init__.py
+pip install IPython
+
+
+
 <div align="center">
   <div>&nbsp;</div>
   <img src="resources/openvoicelogo.jpg" width="400"/> 
