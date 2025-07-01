@@ -9,7 +9,7 @@ import subprocess
 OUTPUT_FILE_BASE = "output_{0}_{1}.wav"
 TEMP_WAV_FILE = "temp_voice.wav"
 
-DEFAULT_SAMPLE_RATE = 16000
+DEFAULT_SAMPLE_RATE = 22050
 DEFAULT_INPUT_VOICE_FILE = "your_voice.mp3"
 DEFAULT_LANGUAGE = "ru"
 DEFAULT_TEXT = "1 2 3 4"

@@ -20,4 +20,20 @@ conda activate voice_clone
 python main.py
 ```
 
+And follow instructions
+
 After that you will have output_en.wav and output_ru.wav files - cloned voices saying some default text
+
+## Requirements for input file
+
+- use .mp3
+
+- use bitrate 22050
+
+- only talk in one language, without noise, medium loudness
+
+## Useful links
+
+- Convert audio bitrate: https://www.aconvert.com/audio/
+
+- Convert wav to mp3: https://www.freeconvert.com/wav-to-mp3
