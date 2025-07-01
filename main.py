@@ -3,10 +3,31 @@ import torch
 from TTS.api import TTS
 import soundfile as sf
 import subprocess
-from IPython.display import Audio
 
-def convert_to_wav(input_file, output_file, sample_rate=16000):
-    """Конвертация аудиофайла в WAV формата 16kHz"""
+
+# Constants
+OUTPUT_FILE_BASE = "output_{0}_{1}.wav"
+TEMP_WAV_FILE = "temp_voice.wav"
+
+DEFAULT_SAMPLE_RATE = 16000
+DEFAULT_INPUT_VOICE_FILE = "your_voice.mp3"
+DEFAULT_LANGUAGE = "ru"
+DEFAULT_TEXT = "1 2 3 4"
+
+
+def input_with_default(label="Input", default=""):
+    i = input(f"{label} ({default}): ")
+    if i.strip() == "":
+        return default
+    return i
+
+
+def convert_to_wav(input_file: str, output_file: str, sample_rate: int) -> bool:
+    """
+    input_file:  relative path to input file (f.e. "./your_voice.mp3")
+    output_file: relative path to output file with .wav extension (f.e. "./temp_voice.wav")
+    sample_rate: integer for sample rate of input file (f.e. 16000)
+    """
     try:
         subprocess.run([
             'ffmpeg', '-i', input_file,
@@ -16,75 +37,78 @@ def convert_to_wav(input_file, output_file, sample_rate=16000):
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except Exception as e:
-        print(f"Ошибка при конвертации: {e}")
+        print(f"Error while converting file {input_file} to {output_file} with sample rate = {sample_rate}: {e}")
         return False
 
-def clone_voice(input_audio, text_to_speak, output_file="cloned_voice.wav", language="ru"):
-    """Клонирование голоса с исправленной версией XTTS"""
-    # Проверяем доступность CUDA
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print(f"Используемое устройство: {device}")
 
-    # Конвертируем входной файл
+def clone_voice(input_audio: str, input_sample_rate: int, text_to_speak: str, output_file: str, language: str):
+    """
+    input_audio:       relative path to input file (f.e. "./your_voice.mp3")
+    input_sample_rate: integer for sample rate of input file (f.e. 16000)
+    text_to_speak:     text which will be pronounced by the cloned voice
+    output_file:       relative path to output file with .wav extension (f.e. "./temp_voice.wav")
+    language:          one of allowed laguage codes ("ru"/"en") of current working language
+    """
+    # Check cuda
+    if torch.cuda.is_available():
+        device = 'cuda'
+        print("GPU was detected. It will be used to speed up the computations")
+    else:
+        device = 'cpu'
+        print("Defaulting to CPU (no GPU was detected)")
+
+    # Preparing input data
     if not input_audio.endswith('.wav'):
-        wav_file = "temp_voice.wav"
-        if not convert_to_wav(input_audio, wav_file):
-            raise ValueError("Не удалось конвертировать входной файл")
+        wav_file = TEMP_WAV_FILE
+        if not convert_to_wav(input_audio, wav_file, input_sample_rate):
+            raise ValueError("Couldn't convert input file!")
         input_audio = wav_file
 
+    # Main speech processing
     try:
-        # Инициализация модели с правильными параметрами
+        # Initialize model
         tts = TTS(
             model_name="tts_models/multilingual/multi-dataset/xtts_v2",
             progress_bar=True,
             config_path=None,
             vocoder_path=None,
-            gpu=False if device == 'cpu' else True
+            gpu=(device == 'cuda'),
         )
 
-        # Генерация речи
+        # Generate
         tts.tts_to_file(
             text=text_to_speak,
             speaker_wav=input_audio,
             language=language,
-            file_path=output_file
+            file_path=output_file,
         )
-        
-        print(f"\nУспешно! Результат сохранён в {output_file}")
-        
-        # Воспроизведение результата
-        try:
-            audio, sr = sf.read(output_file)
-            return Audio(audio, rate=sr)
-        except:
-            pass
-        
+
+        # Done!
+        print(f"\nSuccess! The result has been saved in {output_file}")
+
     except Exception as e:
-        print(f"Критическая ошибка: {e}")
-        return None
+        print(f"Critical error!")
+        print(traceback.format_exc())
+
 
 if __name__ == "__main__":
-    # Установите правильные версии библиотек перед запуском:
-    print("""
-    Перед запуском выполните:
-    pip install TTS==0.20.2 torch==2.1.0 torchaudio==2.1.0 transformers==4.29.2
-    """)
+    # Inputs
+    input_voice_file = input_with_default("Relative path to input file", DEFAULT_INPUT_VOICE_FILE)
+    language = input_with_default("Select language, available for now are [ru, en]", DEFAULT_LANGUAGE)
+    text = input_with_default("Text to pronounce with generated voice in selected language", DEFAULT_TEXT)
+    input_sample_rate = input_with_default("Sample rate of input file (if you don't know what it is - just press enter)", DEFAULT_SAMPLE_RATE)
 
-    input_voice = "your_voice.mp3"
-    
-    # Русский пример
-    if os.path.exists(input_voice):
-        print("Клонирование на русском...")
-        clone_voice(input_voice, 
-                   "Привет, это мой клонированный голос. Как вам такое?", 
-                   "output_ru.wav",
-                   language="ru")
-        
-        # Английский пример
-        print("Клонирование на английском...")
-        clone_voice(input_voice,
-                   "Hello! This is my cloned voice speaking English",
-                   "output_en.wav",
-                   language="en")
+    # Calculate from inputs
+    output_file = OUTPUT_FILE_BASE.format(os.path.basename(input_voice_file), language)
+
+    if not os.path.exists(input_voice_file):
+        print(f"File to clone ({input_voice_file}) does not exist")
     else:
-        print(f"Файл {input_voice} не найден")
+        print(f"Cloning file {input_voice_file} in language {language}")
+        clone_voice(
+            input_voice_file,
+            input_sample_rate,
+            text,
+            output_file,
+            language,
+        )
